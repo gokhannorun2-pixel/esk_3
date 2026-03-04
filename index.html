@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>E.S.K. Kimlik</title>
+
+<!-- Stil -->
+<style>
+body { background-color: black; color: #00ff00; font-family: monospace; padding: 20px; }
+button { margin-top: 5px; padding: 5px 10px; }
+input { padding: 5px; }
+.box { border: 1px solid #00ff00; padding: 15px; margin-top: 15px; }
+.admin-box { border: 1px dashed red; padding: 10px; margin-top: 10px; }
+</style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Firebase Config -->
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAafQ-tpM_YMTkWVkQKmVPdutCdyBnTnW8",
+  authDomain: "aaaa-b38aa.firebaseapp.com",
+  projectId: "aaaa-b38aa",
+  storageBucket: "aaaa-b38aa.firebasestorage.app",
+  messagingSenderId: "707421690366",
+  appId: "1:707421690366:web:a56cebe162440ef4d388af"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+</head>
+<body>
+
+<h2>E.S.K. Kimlik Doğrulama</h2>
+
+<input type="text" id="kodInput" placeholder="E.S.K numaranızı giriniz">
+<button onclick="kontrolEt()">Sorgula</button>
+
+<div id="sonuc" class="box"></div>
+<div id="adminDiv" class="admin-box"></div>
+
+<script>
+// Kod girildiğinde Firestore’dan veri çek
+async function kontrolEt() {
+    const kod = document.getElementById("kodInput").value;
+    const sonuc = document.getElementById("sonuc");
+    const adminDiv = document.getElementById("adminDiv");
+    adminDiv.innerHTML = "";
+
+    const docRef = db.collection("kayitlar").doc(kod);
+    const docSnap = await docRef.get();
+
+    if (docSnap.exists) {
+        const kayit = docSnap.data();
+        sonuc.innerHTML = `
+            <b>>> KAYIT BULUNDU:</b><br><br>
+            İSİM: ${kayit.isim}<br>
+            YAŞ: ${kayit.yas}<br>
+            MEVKİ/GÖREV: ${kayit.mevki || kayit.gorev || ''}<br>
+            ÖDÜL: ${kayit.odul}<br>
+            SUÇLARI: ${kayit.suc}<br>
+            GOL: ${kayit.gol}
+        `;
+        adminDiv.innerHTML = `
+            <b>>> YÖNETİCİ GİRİŞİ:</b><br>
+            Kod: <input type="password" id="adminKod" placeholder="1234">
+            <button onclick="yoneticiGiris('${kod}')">Giriş</button>
+        `;
+    } else {
+        sonuc.innerHTML = "[!] HATA: Geçersiz numara!";
+    }
+}
+
+// Yönetici giriş yaptı
+async function yoneticiGiris(kod) {
+    const adminKod = document.getElementById("adminKod").value;
+    if(adminKod !== "1234"){ alert("Yönetici kodu yanlış!"); return; }
+
+    const docRef = db.collection("kayitlar").doc(kod);
+    const docSnap = await docRef.get();
+    if(!docSnap.exists) return;
+
+    const kayit = docSnap.data();
+
+    document.getElementById("adminDiv").innerHTML = `
+        <b>Yönetici Modu:</b><br>
+        İsim: <input id="isim" value="${kayit.isim}"><br>
+        Yaş: <input id="yas" type="number" value="${kayit.yas}"><br>
+        Mevki/Görev: <input id="mevki" value="${kayit.mevki || kayit.gorev || ''}"><br>
+        Ödül: <input id="odul" value="${kayit.odul}"><br>
+        Suçları: <input id="suc" value="${kayit.suc}"><br>
+        Gol: <input id="gol" type="number" value="${kayit.gol}"><br>
+        <button onclick="kayitGuncelle('${kod}')">Kaydet</button>
+    `;
+}
+
+// Yönetici kaydettiğinde Firestore’a yaz
+async function kayitGuncelle(kod){
+    const yeniKayit = {
+        isim: document.getElementById("isim").value,
+        yas: parseInt(document.getElementById("yas").value) || 0,
+        mevki: document.getElementById("mevki").value,
+        odul: document.getElementById("odul").value,
+        suc: document.getElementById("suc").value,
+        gol: parseInt(document.getElementById("gol").value) || 0
+    };
+    await db.collection("kayitlar").doc(kod).set(yeniKayit);
+    alert("Kayıt güncellendi! Tüm kullanıcılar görebilecek.");
+    kontrolEt();
+}
+</script>
+
+</body>
+</html>
